@@ -2,6 +2,7 @@ import "server-only"
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto"
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { addDays, formatLocalDate } from "@/lib/date"
 import { initialPatients, mockMoodEntries, type MoodEntry, type User } from "@/lib/store"
@@ -13,16 +14,40 @@ import type {
   TaskStatus,
 } from "@/lib/pilot-types"
 
-const dataDirectory = path.join(process.cwd(), ".data")
+const isNetlifyRuntime = Boolean(process.env.SITE_ID || process.env.NETLIFY === "true")
+const isServerlessRuntime = isNetlifyRuntime || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+const defaultDataDirectory = isServerlessRuntime
+  ? path.join(tmpdir(), "nous-pilot")
+  : path.join(process.cwd(), ".data")
+const dataDirectory = process.env.NOUS_DATA_DIR?.trim() || defaultDataDirectory
 const dataFile = path.join(dataDirectory, "nous-pilot-state.enc")
 const temporaryDataFile = path.join(dataDirectory, "nous-pilot-state.tmp")
 
+let warnedAboutDemoStorageSecret = false
+
 function storageKey() {
-  const configured = process.env.NOUS_DATA_SECRET
-  if (!configured && process.env.NODE_ENV === "production") {
+  const configured = process.env.NOUS_DATA_SECRET?.trim()
+  if (configured) return createHash("sha256").update(configured).digest()
+
+  // O deploy acadêmico no Netlify precisa conseguir iniciar mesmo antes de o
+  // segredo ser configurado no painel. Como os dados são exclusivamente
+  // fictícios, usamos uma chave determinística por site apenas como fallback
+  // demonstrativo. Para qualquer uso real, configure NOUS_DATA_SECRET.
+  if (isNetlifyRuntime) {
+    if (!warnedAboutDemoStorageSecret) {
+      console.warn("NOUS_DATA_SECRET não configurado: usando chave demonstrativa do site. Configure o segredo no Netlify antes de qualquer uso real.")
+      warnedAboutDemoStorageSecret = true
+    }
+    const siteIdentity = process.env.SITE_ID || process.env.URL || "nous-netlify-demo"
+    const sessionSecret = process.env.NOUS_SESSION_SECRET || "academic-demo-session"
+    return createHash("sha256").update(`netlify-demo:${siteIdentity}:${sessionSecret}`).digest()
+  }
+
+  if (process.env.NODE_ENV === "production") {
     throw new Error("NOUS_DATA_SECRET must be configured in production")
   }
-  return createHash("sha256").update(configured || "development-only-nous-data-secret").digest()
+
+  return createHash("sha256").update("development-only-nous-data-secret").digest()
 }
 
 function defaultSettings(patientId: string): CheckinSettings {
@@ -208,21 +233,50 @@ function decryptState(raw: string) {
   return migrated
 }
 
+let inMemoryState: FullPilotState | null = null
+let warnedAboutVolatileStorage = false
+
+function isFilesystemStorageError(error: unknown) {
+  if (!(error instanceof Error) || !("code" in error)) return false
+  return ["ENOENT", "EROFS", "EACCES", "EPERM"].includes(String(error.code))
+}
+
 async function persistState(state: FullPilotState) {
-  await mkdir(dataDirectory, { recursive: true })
-  await writeFile(temporaryDataFile, encryptState(state), { encoding: "utf8", mode: 0o600 })
-  await rename(temporaryDataFile, dataFile)
+  const snapshot = structuredClone(state)
+  try {
+    await mkdir(dataDirectory, { recursive: true })
+    await writeFile(temporaryDataFile, encryptState(snapshot), { encoding: "utf8", mode: 0o600 })
+    await rename(temporaryDataFile, dataFile)
+    inMemoryState = snapshot
+  } catch (error) {
+    if (!isFilesystemStorageError(error)) throw error
+
+    // Alguns runtimes serverless não permitem escrita durável no diretório da
+    // aplicação. Mantemos o estado em memória como contingência para que o
+    // piloto continue funcional no mesmo processo e nunca esconda os pacientes
+    // demonstrativos por uma falha de filesystem.
+    inMemoryState = snapshot
+    if (!warnedAboutVolatileStorage) {
+      console.warn("Persistência em arquivo indisponível; o piloto está usando armazenamento volátil em memória neste processo.")
+      warnedAboutVolatileStorage = true
+    }
+  }
 }
 
 async function readState() {
   try {
-    return decryptState(await readFile(dataFile, "utf8"))
+    const state = decryptState(await readFile(dataFile, "utf8"))
+    inMemoryState = structuredClone(state)
+    return state
   } catch (error) {
-    const missing = error instanceof Error && "code" in error && error.code === "ENOENT"
+    const missing = isFilesystemStorageError(error) && String((error as NodeJS.ErrnoException).code) === "ENOENT"
+
+    if (inMemoryState) return structuredClone(inMemoryState)
     if (!missing) console.warn("The pilot state could not be read; a fresh encrypted state will be created.")
+
     const initialState = createInitialState()
     await persistState(initialState)
-    return initialState
+    return structuredClone(initialState)
   }
 }
 

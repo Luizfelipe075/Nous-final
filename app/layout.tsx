@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? process.env.URL ?? 'http://localhost:3000'),
   title: 'Noûs — acompanhamento entre sessões',
   description: 'Check-ins, tarefas, diário e resumo pré-sessão organizados para psicólogos e pacientes.',
   icons: {

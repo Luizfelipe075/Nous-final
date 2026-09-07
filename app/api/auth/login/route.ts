@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { AUTH_COOKIE, authenticateDemoAccount, createSessionToken } from "@/lib/server-auth"
 
+export const runtime = "nodejs"
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),

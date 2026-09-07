@@ -21,7 +21,7 @@ export function PsyPatients() {
   const [inviteName, setInviteName] = useState("")
   const [inviteEmail, setInviteEmail] = useState("")
   const [patientToRemove, setPatientToRemove] = useState<Patient | null>(null)
-  const { patients, invites, createInvite, archivePatient } = usePilot()
+  const { patients, invites, createInvite, archivePatient, loading, error, refresh } = usePilot()
   const submitInvite = () => { if (!inviteName.trim() || !inviteEmail.trim()) return; void createInvite(inviteName.trim(), inviteEmail.trim()); setInviteName(""); setInviteEmail(""); setShowAddDialog(false) }
 
   const filtered = patients.filter((p) => {
@@ -106,6 +106,27 @@ export function PsyPatients() {
             </SelectContent>
           </Select>
         </div>
+
+        {loading && (
+          <div className="mb-4 rounded-lg border border-[#dbeafe] bg-[#eff6ff] p-4 text-sm font-medium text-[#1d4ed8]">
+            Carregando pacientes do backend…
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between">
+            <span>Não foi possível carregar os pacientes: {error}</span>
+            <button type="button" onClick={() => void refresh()} className="rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-bold text-red-700">
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="mb-4 rounded-lg border border-[#e2e8f0] bg-white p-6 text-center text-sm text-[#64748b]">
+            Nenhum paciente encontrado com os filtros atuais.
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((patient) => {
