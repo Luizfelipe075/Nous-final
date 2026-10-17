@@ -1,11 +1,11 @@
 "use client"
 
 import { useNavigation } from "@/lib/navigation"
-import { BarChart3, BookOpen, CheckCircle2, Heart, Headphones, Users } from "lucide-react"
+import { BarChart3, BookOpen, CheckCircle2, Heart, Headphones, Users, Compass, ShieldCheck, FileText } from "lucide-react"
 import { NousLogo } from "@/components/ui/nous-logo"
 
 const features = [
-  { icon: <Heart className="h-5 w-5" />, audience: "patient", title: "Check-ins rápidos", description: "Humor, energia, sono, ansiedade e contexto em menos de dois minutos." },
+  { icon: <Heart className="h-5 w-5" />, audience: "patient", title: "Check-ins rápidos", description: "Energia, sono, ansiedade e contexto em uma escala Likert consistente." },
   { icon: <BarChart3 className="h-5 w-5" />, audience: "psychologist", title: "Resumo pré-sessão", description: "Entenda o que mudou durante a semana antes de iniciar a conversa." },
   { icon: <Users className="h-5 w-5" />, audience: "psychologist", title: "Tarefas terapêuticas", description: "Combine atividades e acompanhe a realização entre as sessões." },
   { icon: <BookOpen className="h-5 w-5" />, audience: "patient", title: "Linha do tempo", description: "Check-ins, diário compartilhado e tarefas organizados por paciente." },
@@ -49,6 +49,33 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section className="border-b border-[#e6eaec] bg-white px-5 py-10 sm:px-7">
+          <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[1fr_.85fr]">
+            <div className="rounded-xl border border-[#dbe5f2] bg-[#f7faff] p-6">
+              <div className="flex items-start gap-3">
+                <span className="rounded-lg bg-white p-2 text-[#2563eb]"><Compass className="h-5 w-5" /></span>
+                <div>
+                  <h2 className="font-bold">Um guia para a sessão, não um substituto</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#5f686c]">O Noûs ajuda paciente e psicólogo a registrar acontecimentos, combinar atividades, lembrar horários e chegar à sessão com pontos de conversa organizados. A interpretação e as decisões continuam na relação profissional.</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-[#e2e7e9] bg-[#fafbfb] p-6">
+              <div className="flex items-start gap-3">
+                <span className="rounded-lg bg-white p-2 text-[#687074]"><ShieldCheck className="h-5 w-5" /></span>
+                <div>
+                  <h2 className="font-bold">Transparência desde a entrada</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#687074]">Consulte como o protótipo trata privacidade e como a plataforma deve ser usada.</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button onClick={() => navigate("privacy")} className="inline-flex items-center gap-2 rounded-lg border border-[#d7dde0] bg-white px-3 py-2 text-xs font-bold text-[#4f565a]"><ShieldCheck className="h-3.5 w-3.5" /> Política de privacidade</button>
+                    <button onClick={() => navigate("terms")} className="inline-flex items-center gap-2 rounded-lg border border-[#d7dde0] bg-white px-3 py-2 text-xs font-bold text-[#4f565a]"><FileText className="h-3.5 w-3.5" /> Termos de uso</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="recursos" className="bg-[#f7f4f3] px-5 py-14 sm:px-7 lg:py-16">
           <div className="mx-auto max-w-6xl">
             <div className="mx-auto mb-9 max-w-xl text-center">
@@ -82,7 +109,7 @@ export function LandingPage() {
       <footer className="border-t border-[#e3e7e9] bg-white px-5 py-6 sm:px-7">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
           <NousLogo height={25} />
-          <p className="text-center text-[11px] text-[#7b8286]">Noûs não substitui o acompanhamento profissional. É uma ferramenta de apoio ao psicólogo.</p>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-center text-[11px] text-[#7b8286]"><p>Noûs não substitui o acompanhamento profissional. É uma ferramenta de apoio ao psicólogo.</p><button onClick={() => navigate("privacy")} className="font-semibold hover:text-[#2563eb]">Privacidade</button><button onClick={() => navigate("terms")} className="font-semibold hover:text-[#2563eb]">Termos de uso</button></div>
         </div>
       </footer>
     </div>

@@ -21,6 +21,7 @@ import { PsyFollowUp } from "@/components/screens/psy-follow-up"
 import { PsySettings } from "@/components/screens/psy-settings"
 import { PatientTasks } from "@/components/screens/patient-tasks"
 import { PatientPrivacy } from "@/components/screens/patient-privacy"
+import { LegalPage } from "@/components/screens/legal-page"
 import { PilotProvider } from "@/lib/pilot-context"
 
 function AppRouter() {
@@ -45,6 +46,10 @@ function AppRouter() {
   switch (screen) {
     case "landing":
       return <LandingPage />
+    case "privacy":
+      return <LegalPage type="privacy" />
+    case "terms":
+      return <LegalPage type="terms" />
     case "login":
       return <LoginScreen />
     case "tutorial":

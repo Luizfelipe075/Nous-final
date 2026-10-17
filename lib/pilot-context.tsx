@@ -9,6 +9,7 @@ import type {
   ConsentState,
   DiaryEntry,
   PatientInvite,
+  ScheduledSession,
   PilotView,
   TaskStatus,
   TherapeuticTask,
@@ -23,6 +24,7 @@ export type {
   DiaryVisibility,
   NoteKind,
   PatientInvite,
+  ScheduledSession,
   TaskStatus,
   TherapeuticTask,
 } from "@/lib/pilot-types"
@@ -41,6 +43,7 @@ const emptyView: PilotView = {
   notes: [],
   settings: {},
   invites: [],
+  sessions: [],
   audit: [],
   consent: emptyConsent,
   twoFactorEnabled: false,
@@ -60,6 +63,7 @@ interface PilotContextValue extends PilotView {
   updateCheckinSettings: (patientId: string, patch: Partial<CheckinSettings>) => Promise<void>
   createInvite: (name: string, email: string) => Promise<void>
   refreshInvite: (id: string) => Promise<void>
+  importSchedule: (rows: Array<Pick<ScheduledSession, "patientId" | "date" | "time" | "durationMinutes"> & { patientName?: string; patientEmail?: string; note?: string }>) => Promise<void>
   updateConsent: (patch: Partial<ConsentState>) => Promise<void>
   setTwoFactorEnabled: (enabled: boolean) => Promise<void>
   addAuditEvent: (action: string, detail: string) => Promise<void>
@@ -130,6 +134,7 @@ export function PilotProvider({ children }: { children: ReactNode }) {
     updateCheckinSettings: async (patientId, patch) => request("update-settings", { patientId, ...patch }),
     createInvite: async (name, email) => request("create-invite", { name, email }),
     refreshInvite: async (id) => request("refresh-invite", { id }),
+    importSchedule: async (rows) => request("import-schedule", { rows }),
     updateConsent: async (patch) => request("update-consent", patch),
     setTwoFactorEnabled: async (enabled) => request("set-two-factor", { enabled }),
     addAuditEvent: async (action, detail) => request("add-audit", { action, detail }),

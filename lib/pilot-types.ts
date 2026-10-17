@@ -60,6 +60,17 @@ export interface CheckinSettings {
   frequency: "diario" | "3x_semana" | "semanal"
 }
 
+export interface ScheduledSession {
+  id: string
+  patientId: string
+  date: string
+  time: string
+  durationMinutes: number
+  note?: string
+  createdAt: string
+  source: "planilha" | "manual"
+}
+
 export interface PatientInvite {
   id: string
   name: string
@@ -93,6 +104,7 @@ export interface FullPilotState {
   notes: ClinicalNote[]
   settings: Record<string, CheckinSettings>
   invites: PatientInvite[]
+  sessions: ScheduledSession[]
   audit: AuditEvent[]
   consents: Record<string, ConsentState>
   twoFactorEnabled: boolean
@@ -106,6 +118,7 @@ export interface PilotView {
   notes: ClinicalNote[]
   settings: Record<string, CheckinSettings>
   invites: PatientInvite[]
+  sessions: ScheduledSession[]
   audit: AuditEvent[]
   consent: ConsentState
   twoFactorEnabled: boolean

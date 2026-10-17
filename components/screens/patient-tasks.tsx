@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { CheckCircle2, ClipboardCheck, Clock3, LockKeyhole, MessageSquareText } from "lucide-react"
+import { CheckCircle2, ClipboardCheck, Clock3, LockKeyhole, MessageSquareText, ListFilter } from "lucide-react"
 import { PatientLayout } from "./patient-layout"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,8 @@ export function PatientTasks() {
   const { tasks, reportTaskCompletion, error } = usePilot()
   const patientTasks = useMemo(() => tasks.filter((task) => task.patientId === user?.id), [tasks, user?.id])
   const completed = patientTasks.filter((task) => ["conclusao_informada", "revisada"].includes(task.status)).length
+  const [filter, setFilter] = useState<"todas" | "abertas" | "concluidas">("todas")
+  const visibleTasks = useMemo(() => patientTasks.filter((task) => filter === "todas" || (filter === "abertas" ? ["pendente", "em_andamento"].includes(task.status) : ["conclusao_informada", "revisada"].includes(task.status))), [patientTasks, filter])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [performedAt, setPerformedAt] = useState(currentLocalDateTime())
   const [reflection, setReflection] = useState("")
@@ -75,8 +77,17 @@ export function PatientTasks() {
       </div>
     </section>
 
+    <section className="mb-5 rounded-lg border border-[#e2e7e9] bg-white p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-sm font-bold text-[#3f474b]"><ListFilter className="h-4 w-4 text-[#ff7100]" /> Organize suas atividades</div>
+        <div className="flex flex-wrap gap-2" aria-label="Filtrar atividades">
+          {([["todas","Todas"],["abertas","Em aberto"],["concluidas","Concluídas"]] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${filter === value ? "border-[#ff7100] bg-[#fff0e4] text-[#d95f00]" : "border-[#dfe4e6] text-[#687074]"}`}>{label}</button>)}
+        </div>
+      </div>
+    </section>
+
     <div className="space-y-4">
-      {patientTasks.map((task) => {
+      {visibleTasks.map((task) => {
         const reported = Boolean(task.completion)
         return <article key={task.id} className={`rounded-lg border bg-white p-5 shadow-[0_2px_5px_rgba(31,42,46,.10)] ${task.status === "revisada" ? "border-emerald-200" : "border-black/5"}`}>
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -92,6 +103,7 @@ export function PatientTasks() {
           </div>
         </article>
       })}
+      {!visibleTasks.length && <div className="rounded-lg border border-dashed border-[#d7dde0] bg-white px-5 py-10 text-center"><ClipboardCheck className="mx-auto h-7 w-7 text-[#b1b7ba]" /><b className="mt-3 block text-sm text-[#4f565a]">Nenhuma atividade neste filtro</b><p className="mt-1 text-xs text-[#80878b]">As atividades combinadas com sua psicóloga aparecerão aqui.</p></div>}
     </div>
 
     <div className="mt-5 flex gap-3 rounded-lg bg-[#f3f5f5] p-4 text-xs leading-relaxed text-[#70777b]"><LockKeyhole className="h-4 w-4 shrink-0 text-[#ff7100]" /> A conclusão é um autorrelato do paciente. O NOUS registra data, versão da atividade e reflexão, mas não afirma que a execução foi comprovada por vigilância.</div>

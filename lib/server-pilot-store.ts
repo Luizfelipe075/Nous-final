@@ -12,6 +12,7 @@ import type {
   FullPilotState,
   PilotView,
   TaskStatus,
+  ScheduledSession,
 } from "@/lib/pilot-types"
 
 const isNetlifyRuntime = Boolean(process.env.SITE_ID || process.env.NETLIFY === "true")
@@ -173,6 +174,11 @@ function createInitialState(): FullPilotState {
       },
     ],
     settings,
+    sessions: [
+      { id: "session-1", patientId: "p1", date: today, time: "09:30", durationMinutes: 50, note: "Sessão regular", createdAt: "2026-08-29T08:00:00.000Z", source: "planilha" },
+      { id: "session-2", patientId: "p2", date: today, time: "11:00", durationMinutes: 50, note: "Sessão regular", createdAt: "2026-08-29T08:05:00.000Z", source: "planilha" },
+      { id: "session-3", patientId: "p5", date: today, time: "15:30", durationMinutes: 50, note: "Sessão regular", createdAt: "2026-08-29T08:10:00.000Z", source: "planilha" },
+    ],
     invites: [
       { id: "invite-1", name: "Mariana Lopes", email: "mariana@email.com", sentAt: "2026-08-28T16:20:00.000Z", status: "pendente" },
     ],
@@ -223,6 +229,7 @@ function decryptState(raw: string) {
       enabled: setting.enabled,
       frequency: setting.frequency,
     }])),
+    sessions: Array.isArray((stored as { sessions?: unknown }).sessions) ? (stored as { sessions: ScheduledSession[] }).sessions : [],
     consents: Object.fromEntries(Object.entries(stored.consents).map(([patientId, consent]) => [patientId, {
       accepted: consent.accepted,
       shareCheckins: consent.shareCheckins,
@@ -297,6 +304,7 @@ export function viewForUser(state: FullPilotState, user: User): PilotView {
       notes: state.notes.filter((note) => note.patientId === user.id && note.kind === "prontuario"),
       settings: { [user.id]: state.settings[user.id] || defaultSettings(user.id) },
       invites: [],
+      sessions: state.sessions.filter((session) => session.patientId === user.id),
       audit: state.audit.filter((event) => event.actorId === user.id).slice(0, 30),
       consent,
       twoFactorEnabled: false,
@@ -312,6 +320,7 @@ export function viewForUser(state: FullPilotState, user: User): PilotView {
     notes: state.notes.filter((note) => activeIds.has(note.patientId)),
     settings: Object.fromEntries(Object.entries(state.settings).filter(([patientId]) => activeIds.has(patientId))),
     invites: state.invites,
+    sessions: state.sessions.filter((session) => activeIds.has(session.patientId)),
     audit: state.audit.slice(0, 30),
     consent: defaultConsent(),
     twoFactorEnabled: state.twoFactorEnabled,
@@ -535,6 +544,44 @@ export async function performPilotAction(user: User, action: string, rawPayload:
         frequency: ["diario", "3x_semana", "semanal"].includes(String(payload.frequency)) ? payload.frequency as CheckinSettings["frequency"] : current.frequency,
       }
       audit(state, user, "Acompanhamento configurado", `Preferências atualizadas para ${patientId}`)
+      return
+    }
+
+    if (action === "import-schedule") {
+      ensureRole(user, "psicologo")
+      const rows = Array.isArray(payload.rows) ? payload.rows : []
+      if (!rows.length || rows.length > 500) throw new PilotActionError("A planilha deve conter entre 1 e 500 horários.", 400)
+      let imported = 0
+      for (const raw of rows) {
+        const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : {}
+        const patientIdValue = textValue(row.patientId, 100)
+        const name = textValue(row.patientName, 180).toLowerCase()
+        const email = textValue(row.patientEmail, 240).toLowerCase()
+        const patient = state.patients.find((item) => !item.archivedAt && (
+          (patientIdValue && item.id === patientIdValue) ||
+          (email && item.email.toLowerCase() === email) ||
+          (name && item.name.toLowerCase() === name)
+        ))
+        const date = textValue(row.date, 10)
+        const time = textValue(row.time, 5)
+        if (!patient || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) continue
+        const duration = Number(row.durationMinutes ?? 50)
+        if (!Number.isFinite(duration) || duration < 15 || duration > 240) continue
+        state.sessions.push({
+          id: randomUUID(),
+          patientId: patient.id,
+          date,
+          time,
+          durationMinutes: Math.round(duration),
+          note: textValue(row.note, 300) || undefined,
+          createdAt: new Date().toISOString(),
+          source: "planilha",
+        })
+        imported += 1
+      }
+      if (!imported) throw new PilotActionError("Nenhum horário válido foi encontrado. Confira paciente, data (AAAA-MM-DD) e hora (HH:MM).", 400)
+      state.sessions.sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))
+      audit(state, user, "Agenda importada", `${imported} horário(s) adicionados por planilha`)
       return
     }
 

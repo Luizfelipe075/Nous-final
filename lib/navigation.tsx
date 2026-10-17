@@ -21,6 +21,8 @@ export type Screen =
   | "psy-settings"
   | "patient-tasks"
   | "patient-privacy"
+  | "privacy"
+  | "terms"
 
 const pathByScreen: Record<Screen, string> = {
   landing: "/",
@@ -33,6 +35,8 @@ const pathByScreen: Record<Screen, string> = {
   "emotion-wheel": "/paciente/diario-emocoes",
   "patient-tasks": "/paciente/atividades",
   "patient-privacy": "/paciente/privacidade",
+  privacy: "/privacidade",
+  terms: "/termos-de-uso",
   "psy-dashboard": "/psicologo",
   "psy-patients": "/psicologo/pacientes",
   "psy-patient-detail": "/psicologo/paciente",
